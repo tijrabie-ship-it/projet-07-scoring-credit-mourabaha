@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نموذج التقييم لعقود المرابحة</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>نظام التقييم لعقود المرابحة</h1>
+            <p>منصة تطبيقية للتنبؤ بمخاطر التعثر المالي باستخدام نماذج تعلم الآلة</p>
+        </header>
+
+        <form id="predictionForm">
+            <fieldset>
+                <legend>البيانات الديموغرافية والمالية للعميل</legend>
+                
+                <div class="form-group">
+                    <label>عمر العميل (سنوات):</label>
+                    <input type="number" name="age_client" id="age_client" value="35" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>الراتب الشهري (بالدرهم):</label>
+                    <input type="number" step="0.01" name="monthly_salary" value="5000" required>
+                </div>
+
+                <div class="form-group">
+                    <label>سنوات العمل:</label>
+                    <input type="number" step="0.1" name="employment_years" value="5" required>
+                </div>
+
+                <div class="form-group">
+                    <label>الجنس:</label>
+                    <select name="gender" required>
+                        <option value="Male">ذكر</option>
+                        <option value="Female">أنثى</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>المستوى الدراسي:</label>
+                    <select name="education_level" required>
+                        <option value="Secondary">ثانوي</option>
+                        <option value="University">جامعي</option>
+                        <option value="Primary">ابتدائي</option>
+                        <option value="None">بدون</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>الحالة العائلية:</label>
+                    <select name="family_status" required>
+                        <option value="Single">أعزب/عزباء</option>
+                        <option value="Married">متزوج/ـة</option>
+                        <option value="Divorced">مطلق/ـة</option>
+                        <option value="Widowed">أرمل/ـة</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>عدد الأطفال:</label>
+                    <input type="number" name="nb_children" value="0" required>
+                </div>
+            </fieldset>
+
+            <fieldset>
+                <legend>خصائص عقد المرابحة</legend>
+                
+                <div class="form-group">
+                    <label>سنة العقد:</label>
+                    <input type="number" name="contract_year" value="2023" required>
+                </div>
+
+                <div class="form-group">
+                    <label>مبلغ التمويل الإجمالي:</label>
+                    <input type="number" step="0.01" name="financing_amount" id="financing_amount" value="150000" required>
+                </div>
+
+                <div class="form-group">
+                    <label>القسط الشهري:</label>
+                    <input type="number" step="0.01" name="monthly_installment" id="monthly_installment" value="3000" min="1000" required>
+                </div>
+
+                <div class="form-group">
+                    <label>غرض المرابحة (النوع):</label>
+                    <select name="murabaha_type" required>
+                        <option value="Real_Estate">عقارية</option>
+                        <option value="Auto">سيارات</option>
+                        <option value="Equipment">تجهيزات</option>
+                        <option value="Consumer">استهلاكية</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>مدة العقد (بالأشهر):</label>
+                    <input type="number" name="contract_duration_months" id="contract_duration_months" value="60" max="300" required>
+                </div>
+
+                <div class="form-group">
+                    <label>هامش الربح بالدرهم (Margin Rate):</label>
+                    <input type="number" step="0.01" name="margin_rate" id="margin_rate" value="" readonly required>
+                </div>
+
+                <div class="form-group">
+                    <label>قيمة الضمانات (Collateral):</label>
+                    <input type="number" step="0.01" name="collateral_value" value="200000" required>
+                </div>
+            </fieldset>
+
+
+
+            <button type="submit" id="submitBtn">تقييم العقد (Predict)</button>
+        </form>
+
+        <div id="resultArea" style="display: none;"></div>
+    </div>
+
+    <script>
+        // Auto-calculate Margin Rate and validate Duration and Age
+        function calculateMargin() {
+            const financing = parseFloat(document.getElementById('financing_amount').value) || 0;
+            const installment = parseFloat(document.getElementById('monthly_installment').value) || 0;
+            const durationInput = document.getElementById('contract_duration_months');
+            const duration = parseFloat(durationInput.value) || 0;
+            const marginInput = document.getElementById('margin_rate');
+            const ageInput = document.getElementById('age_client');
+            const age = parseFloat(ageInput.value) || 0;
+
+            // Set custom validation for duration
+            if (installment > 0 && duration < (financing / installment)) {
+                durationInput.setCustomValidity(Math.ceil(financing / installment) + ' شهر على الأقل');
+            } else {
+                durationInput.setCustomValidity(''); // Clear error
+            }
+
+            // Calculate profit margin in dirhams
+            if (financing > 0 && installment > 0 && duration > 0) {
+                const profit = (duration * installment) - financing;
+                marginInput.value = profit.toFixed(2);
+            } else {
+                marginInput.value = "";
+            }
+        }
+
+        // Attach event listeners
+        document.getElementById('financing_amount').addEventListener('input', calculateMargin);
+        document.getElementById('monthly_installment').addEventListener('input', calculateMargin);
+        document.getElementById('contract_duration_months').addEventListener('input', calculateMargin);
+        document.getElementById('age_client').addEventListener('input', calculateMargin);
+
+        // Initial calculation
+        calculateMargin();
+
+        document.getElementById('predictionForm').addEventListener('submit', function(e) {
+            e.preventDefault(); 
+            
+            const formData = new FormData(this);
+            const resultArea = document.getElementById('resultArea');
+            const submitBtn = document.getElementById('submitBtn');
+            
+            submitBtn.innerText = 'جاري التحليل واستخراج النتيجة...';
+            submitBtn.disabled = true;
+            
+            fetch('/predict', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                submitBtn.innerText = 'تقييم العقد (Predict)';
+                submitBtn.disabled = false;
+                resultArea.style.display = 'block';
+                
+                if(data.status === 'success') {
+                    // عرض النتيجة
+                    let riskText = data.prediction === 1 ? 'خطر تعثر مالي (عقد غير محبذ)' : 'مخاطرة مقبولة (عقد سليم)';
+                    let riskClass = data.prediction === 1 ? 'high-risk' : 'success-risk';
+                    
+                    resultArea.className = riskClass;
+                    resultArea.innerHTML = `
+                        <h3>نتيجة التقييم: ${riskText}</h3>
+                        <p>احتمالية التعثر (PD): <strong>${(data.probability * 100).toFixed(2)}%</strong></p>
+                    `;
+                } else {
+                    resultArea.className = 'high-risk';
+                    resultArea.innerHTML = `<h4>حدث خطأ: ${data.message}</h4>`;
+                }
+            })
+            .catch(error => {
+                submitBtn.innerText = 'تقييم العقد (Predict)';
+                submitBtn.disabled = false;
+                resultArea.style.display = 'block';
+                resultArea.className = 'high-risk';
+                resultArea.innerHTML = `<h4>حدث خطأ في الاتصال، يرجى المحاولة لاحقاً</h4>`;
+            });
+        });
+    </script>
+
+</body>
+</html>
